@@ -39,6 +39,7 @@
 #include <boost/foreach.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/posix_time/posix_time_io.hpp>
+#include <fstream>
 #define foreach BOOST_FOREACH
 
 #ifdef ROVIO_NMAXFEATURE
@@ -72,6 +73,8 @@ static constexpr int nPose_ = 0; // Additional pose states.
 #endif
 
 typedef rovio::RovioFilter<rovio::FilterState<nMax_,nLevels_,patchSize_,nCam_,nPose_>> mtFilter;
+
+using namespace std;
 
 int main(int argc, char** argv){
   ros::init(argc, argv, "rovio");
@@ -178,6 +181,7 @@ int main(int argc, char** argv){
 
   bool isTriggerInitialized = false;
   double lastTriggerTime = 0.0;
+  // static ofstream ouf("rovio_time.log"); 
   for(rosbag::View::iterator it = view.begin();it != view.end() && ros::ok();it++){
     if(it->getTopic() == imu_topic_name){
       sensor_msgs::Imu::ConstPtr imuMsg = it->instantiate<sensor_msgs::Imu>();
@@ -185,7 +189,14 @@ int main(int argc, char** argv){
     }
     if(it->getTopic() == cam0_topic_name){
       sensor_msgs::ImageConstPtr imgMsg = it->instantiate<sensor_msgs::Image>();
-      if (imgMsg != NULL) rovioNode.imgCallback0(imgMsg);
+      if (imgMsg != NULL)
+      {
+	// TicToc t_s; 
+	rovioNode.imgCallback0(imgMsg);
+	// double t = t_s.toc(); 
+	// ouf<<t<<endl; 
+      }
+      
     }
     if(it->getTopic() == cam1_topic_name){
       sensor_msgs::ImageConstPtr imgMsg = it->instantiate<sensor_msgs::Image>();

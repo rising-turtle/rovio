@@ -32,6 +32,9 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <iostream>
+#include <fstream>
+#include "tic_toc.h"
 
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/Pose.h>
@@ -206,7 +209,9 @@ class RovioNode{
 
     // Subscribe topics
     subImu_ = nh_.subscribe("imu0", 1000, &RovioNode::imuCallback,this);
-    subImg0_ = nh_.subscribe("cam0/image_raw", 1000, &RovioNode::imgCallback0,this);
+    // subImg0_ = nh_.subscribe("cam0/image_raw", 1000, &RovioNode::imgCallback0,this);
+    subImg0_ = nh_.subscribe("cam0/color", 1000, &RovioNode::imgCallback0,this);
+
     subImg1_ = nh_.subscribe("cam1/image_raw", 1000, &RovioNode::imgCallback1,this);
     subGroundtruth_ = nh_.subscribe("pose", 1000, &RovioNode::groundtruthCallback,this);
     subGroundtruthOdometry_ = nh_.subscribe("odometry", 1000, &RovioNode::groundtruthOdometryCallback, this);
@@ -497,11 +502,18 @@ class RovioNode{
    */
   void imgCallback(const sensor_msgs::ImageConstPtr & img, const int camID = 0){
     // Get image from msg
+     TicToc t_s; 
+     double t; 
+     static std::ofstream ouf("rovio_time.log"); 
+
     cv_bridge::CvImagePtr cv_ptr;
     try {
-      cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::TYPE_8UC1);
+      if(img->encoding == "bgr8")
+          cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::MONO8);
+      else
+	 cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::TYPE_8UC1); 
     } catch (cv_bridge::Exception& e) {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
+      ROS_ERROR("here rovio_node cv_bridge exception: %s", e.what());
       return;
     }
     cv::Mat cv_img;
@@ -523,6 +535,9 @@ class RovioNode{
         mpFilter_->template addUpdateMeas<0>(imgUpdateMeas_,msgTime);
         imgUpdateMeas_.template get<mtImgMeas::_aux>().reset(msgTime);
         updateAndPublish();
+	t = t_s.toc(); 
+	ouf<<t<<std::endl; 
+	std::cout<<std::fixed<<"rovio_node: at timestamp: "<<img->header.stamp.toSec()<<" cost "<<t<<" ms!"<<std::endl;
       }
     }
   }
